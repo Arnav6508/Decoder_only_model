@@ -74,30 +74,22 @@ def generate(prompt_tokens: list[int], model: DecoderOnlyTransformer, vocab: Voc
 def calculate_perplexity(model: DecoderOnlyTransformer, prompt_tokens: list[int], reference_tokens: list[int], vocab: Vocabulary) -> float:
     model.eval()
     
-    # Combine prompt and reference to form the full target sequence
     full_sequence = prompt_tokens + reference_tokens
     input_tensor = torch.tensor(full_sequence, dtype=torch.long, device=device).unsqueeze(0)
 
-    # Truncate the input sequence if it exceeds the model's context length
     input_tensor = input_tensor[:, :CONTEXT_LEN]
     
-    # The target for the loss function is the input sequence shifted by one
     target_tensor = input_tensor[:, 1:]
     
     with torch.no_grad():
-        # Get logits for the entire sequence
         logits = model(input_tensor[:, :-1])
 
-    # We only care about the loss on the 'continuation' part
-    # Logits for prompt_len-1 onwards predict tokens from prompt_len onwards (the reference)
     continuation_logits = logits[:, len(prompt_tokens)-1:, :]
     continuation_targets = target_tensor[:, len(prompt_tokens)-1:]
 
-    # Reshape for CrossEntropyLoss
     continuation_logits = continuation_logits.reshape(-1, len(vocab))
     continuation_targets = continuation_targets.reshape(-1)
 
-    # Calculate cross-entropy loss, ignoring padding if any
     loss = F.cross_entropy(continuation_logits, continuation_targets, ignore_index=vocab.stoi['<pad>'])
     
     perplexity = torch.exp(loss).item()
@@ -105,33 +97,10 @@ def calculate_perplexity(model: DecoderOnlyTransformer, prompt_tokens: list[int]
 
 
 def visualize_attention(sentence: str, model: DecoderOnlyTransformer, vocab: Vocabulary):
-    """
-    Visualizes the self-attention weights for each head in each layer.
-    
-    **IMPORTANT**: This function requires your model's forward pass to be modified
-    to accept a `return_attention` flag and return the attention weights.
-    
-    Example modification in your DecoderOnlyTransformer's forward method:
-    
-    def forward(self, x, return_attention=False):
-        # ... your existing forward pass ...
-        all_layer_attentions = []
-        for layer in self.layers:
-            x, attention_weights = layer(x) # Assume layer now returns weights
-            all_layer_attentions.append(attention_weights)
-        # ...
-        if return_attention:
-            return self.fc_out(x), all_layer_attentions
-        return self.fc_out(x)
-        
-    And your DecoderLayer's forward pass should also be updated to return the weights
-    from its multi-head attention sub-layer.
-    """
-
     output_dir = "results/inference/attention_visualizations"
     os.makedirs(output_dir, exist_ok=True)
     
-    sanitized_sentence = "_".join(sentence.split()[:5]) # Use first 5 words for filename
+    sanitized_sentence = "_".join(sentence.split()[:5]) 
 
     print(f"\n--- Visualizing attention for: '{sentence}' ---")
     model.eval()
@@ -193,7 +162,7 @@ def main():
     print(f"Loading checkpoint from {CHECKPOINT_FILE}...")
     checkpoint = torch.load(CHECKPOINT_FILE, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
-    print("✅ Model state loaded successfully.")
+    print("Model state loaded successfully.")
 
     # Calc Metrics (Perplexity and BLEU)
     print("\n" + "="*50)

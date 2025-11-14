@@ -14,11 +14,9 @@ sys.path.append(parent_dir)
 from datasets import load_dataset
 from utils import Vocabulary, TinyStoriesDataset
 
-# Import BOTH model versions
 from models.model import DecoderOnlyTransformer as DecoderOnlyTransformerBaseline
 from models.model_kv import DecoderOnlyTransformer as DecoderOnlyTransformerKV
 
-# --- Model & Eval Configuration ---
 D_MODEL = 300
 N_LAYERS = 3
 N_HEADS = 8
@@ -34,10 +32,9 @@ results_dir = os.path.join(parent_dir, "results", "kv_caching")
 os.makedirs(results_dir, exist_ok=True)
 results_file = os.path.join(results_dir, "kv_caching_evaluation.txt")
 
-# --- BENCHMARK CONFIGURATION ---
-BATCH_SIZE = 20           # As requested
+BATCH_SIZE = 20          
 PROMPT_LENGTH = 5
-MAX_GENERATION_LENGTH = 100 # Total length to generate (e.g., 5 prompt + 95 new)
+MAX_GENERATION_LENGTH = 100 
 TEMPERATURE = 0.8 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -55,15 +52,11 @@ def generate_baseline_batched(prompts_tensor: torch.Tensor, model: DecoderOnlyTr
     total_tokens_generated = 0
 
     with torch.no_grad():
-        # Generate max_len - prompt_len new tokens
         for _ in range(max_len - input_tensor.size(1)):
-            # Input is always the last CONTEXT_LEN tokens
             input_for_model = input_tensor[:, -CONTEXT_LEN:]
             
-            # Re-computes all attention from scratch every time
             output = model(input_for_model) 
             
-            # Get logits for the very last token
             last_token_logits = output[:, -1, :]
             
             scaled_logits = last_token_logits / temp
@@ -71,18 +64,13 @@ def generate_baseline_batched(prompts_tensor: torch.Tensor, model: DecoderOnlyTr
             
             next_token_indices = torch.multinomial(probs, num_samples=1)
             
-            # Append new tokens to the input
             input_tensor = torch.cat([input_tensor, next_token_indices], dim=1)
-            total_tokens_generated += input_tensor.size(0) # Add batch_size
+            total_tokens_generated += input_tensor.size(0)
 
     return total_tokens_generated
 
 
 def generate_with_kv_cache(prompts_tensor: torch.Tensor, model: DecoderOnlyTransformerKV, max_len: int, temp: float) -> int:
-    """
-    Generates text autoregressively WITH KV cache, for a batch.
-    Returns total number of tokens generated.
-    """
     model.eval()
     
     input_tensor = prompts_tensor.to(device)
@@ -91,31 +79,21 @@ def generate_with_kv_cache(prompts_tensor: torch.Tensor, model: DecoderOnlyTrans
     past_kv_caches = None
 
     with torch.no_grad():
-        # 1. --- Process the Prompt ---
-        # Pass the whole prompt to "prime" the KV cache
         logits, new_kv_caches = model(input_tensor, past_kv_caches=None)
         
         past_kv_caches = new_kv_caches
         
-        # Get the logits for the *next* token
         last_token_logits = logits[:, -1, :]
         
         scaled_logits = last_token_logits / temp
         probs = torch.softmax(scaled_logits, dim=-1)
         
-        # Sample the first new token
         next_token_indices = torch.multinomial(probs, num_samples=1)
         
-        # This is now our input for the generation loop
         input_tensor = next_token_indices
         total_tokens_generated += batch_size
 
-        # 2. --- Generation Loop ---
-        # Generate remaining (max_len - prompt_len - 1) tokens
         for _ in range(max_len - prompts_tensor.size(1) - 1):
-            
-            # Input is just the *single last token*
-            # The model uses positional encoding logic to find its place
             logits, new_kv_caches = model(input_tensor, past_kv_caches=past_kv_caches)
             
             past_kv_caches = new_kv_caches
@@ -128,7 +106,6 @@ def generate_with_kv_cache(prompts_tensor: torch.Tensor, model: DecoderOnlyTrans
             
             next_token_indices = torch.multinomial(probs, num_samples=1)
             
-            # Next input is just the new token
             input_tensor = next_token_indices
             total_tokens_generated += batch_size
 
@@ -161,7 +138,6 @@ def main():
             padding_value=pad_idx
         )
 
-    # --- Load Models ---
     if not os.path.exists(CHECKPOINT_FILE):
         raise FileNotFoundError(f"Error: Checkpoint file not found at {CHECKPOINT_FILE}")
 
@@ -183,14 +159,12 @@ def main():
     ).to(device)
     model_kv.load_state_dict(checkpoint['model_state_dict'])
     model_kv.eval()
-    print("✅ Models loaded successfully.")
+    print("Models loaded successfully.")
 
-    # --- Load Data ---
     print(f"Loading {BATCH_SIZE} validation samples...")
     valid_data = load_dataset("roneneldan/TinyStories", split='validation')
     valid_dataset = TinyStoriesDataset(valid_data, vocab)
 
-    # Note: BATCH_SIZE is now 20
     valid_loader = DataLoader(
         valid_dataset, 
         batch_size=BATCH_SIZE, 
@@ -198,14 +172,12 @@ def main():
         collate_fn=collate_fn 
     )
     
-    # Get one batch of 20 samples
     full_sequences_tensor = next(iter(valid_loader))
     prompts_tensor = full_sequences_tensor[:, :PROMPT_LENGTH].to(device)
     
     print(f"Batch shape: {prompts_tensor.shape}")
     print(f"Generating {MAX_GENERATION_LENGTH - PROMPT_LENGTH} new tokens for each sample.")
 
-    # --- Warmup Run ---
     print("\nRunning GPU warmup...")
     _ = generate_baseline_batched(prompts_tensor, model_baseline, MAX_GENERATION_LENGTH, TEMPERATURE)
     _ = generate_with_kv_cache(prompts_tensor, model_kv, MAX_GENERATION_LENGTH, TEMPERATURE)
@@ -213,7 +185,6 @@ def main():
         torch.cuda.synchronize()
     print("Warmup complete.")
 
-    # --- Run Baseline Benchmark ---
     print("\nBenchmarking: Baseline (No KV Cache)...")
     start_time_baseline = time.time()
     
@@ -222,7 +193,7 @@ def main():
     )
     
     if device.type == 'cuda':
-        torch.cuda.synchronize() # Wait for all GPU ops to finish
+        torch.cuda.synchronize() 
     end_time_baseline = time.time()
     
     time_baseline = end_time_baseline - start_time_baseline
@@ -231,7 +202,6 @@ def main():
     print(f"Finished in {time_baseline:.4f} seconds")
     print(f"Generated {total_tokens_baseline} total tokens")
 
-    # --- Run KV Cache Benchmark ---
     print("\nBenchmarking: With KV Cache...")
     start_time_kv = time.time()
     
@@ -240,7 +210,7 @@ def main():
     )
     
     if device.type == 'cuda':
-        torch.cuda.synchronize() # Wait for all GPU ops to finish
+        torch.cuda.synchronize()
     end_time_kv = time.time()
     
     time_kv = end_time_kv - start_time_kv
@@ -249,7 +219,6 @@ def main():
     print(f"Finished in {time_kv:.4f} seconds")
     print(f"Generated {total_tokens_kv} total tokens")
 
-    # --- Print Final Results ---
     print("\n" + "="*50)
     print("Benchmark Results")
     print("="*50)

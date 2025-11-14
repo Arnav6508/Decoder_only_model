@@ -3,14 +3,12 @@ import torch.nn.functional as F
 from typing import List
 
 class Beam:
-    """Helper class to store beam search state."""
     def __init__(self, tokens: torch.Tensor, log_prob: float, device: torch.device):
         self.tokens = tokens      
         self.log_prob = log_prob  
         self.device = device
 
     def extend(self, token_id: int, new_log_prob: float) -> 'Beam':
-        """Creates a new beam by extending the current one with a new token."""
         new_tokens = torch.cat([self.tokens, torch.tensor([[token_id]], device=self.device)], dim=1)
         return Beam(new_tokens, self.log_prob + new_log_prob, self.device)
 
