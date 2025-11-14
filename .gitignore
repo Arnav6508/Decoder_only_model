@@ -1,5 +1,3 @@
 model_checkpoints
-embedding_matrix.pt
-vocab.pkl
 *.pyc
 .vector_cache/
