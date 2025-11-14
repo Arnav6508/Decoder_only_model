@@ -43,6 +43,11 @@ File structure:
 
 <br>
 
+Download the model weights from this google drive link:
+https://drive.google.com/file/d/1LyU08_QZC-IiHygID3s2pOyPNjRNKa7w/view?usp=sharing
+
+<br>
+
 [1] Training the Model
 To train the model from scratch, run the train.py script:
 
