@@ -1,6 +1,7 @@
 
 File structure:
 
+```
 .
 ├── inference/
 │   ├── beam_search_eval.py      # Runs inference using beam search (k=5, k=10, etc.)
@@ -33,41 +34,66 @@ File structure:
 ├── requirements.txt             # Project dependencies
 ├── utils.py                     # Utility functions (e.g., data loaders, tokenizers)
 └── vocab.pkl                    # Pickled vocabulary file
+```
 
+<br>
+<br>
 
 ⚙️ How to Run the Code
 
-1. Training the Model
+<br>
+
+[1] Training the Model
 To train the model from scratch, run the train.py script:
 
+```bash
 python training/train.py
+```
 This script will train the model and save the checkpoints in the model_checkpoints/ directory for each epoch.
 
-2. Plotting Training Metrics
+<br>
+<br>
+
+[2] Plotting Training Metrics
 After training, you can visualize the training/validation loss and perplexity curves.
 
+```bash
 python training/plot_training_metrics.py
+```
 
-3. Running Inference and Evaluation
+<br>
+<br>
+
+[3] Running Inference and Evaluation
 For all evaluation scripts, we'll use the 3-epoch checkpoint as you specified. (Note: The exact command-line arguments might differ slightly based on your code, but this is the general idea).
 
 A. Standard Inference
 To run inference with the base model and generate attention visualizations and evaluation scores (Perplexity, BLEU):
 
+```bash
 python inference/inference.py 
-Output: Results will be saved in results/inference/.
+```
+**Output**: Results will be saved in results/inference/.
+<br>
 
 B. KV Cache Evaluation
 To evaluate the inference speed (throughput, time reduction) gained from using KV Caching:
 
-python inference/kv_cache_eval.py --checkpoint_path model_checkpoints/checkpoint_epoch_3.pth
-Output: Performance metrics will be saved in results/kv_caching/.
+```bash
+python inference/kv_cache_eval.py 
+```
+**Output**: Performance metrics will be saved in results/kv_caching/.
+<br>
 
 C. Beam Search Evaluation
 To run inference using beam search and compare its BLEU score and speed against standard sampling:
 
+```bash
 python inference/beam_search_eval.py 
-Output: Comparison results will be saved in results/beam_search/.
+```
+**Output**: Comparison results will be saved in results/beam_search/.
+<br>
+
 
 📊 Results
 All generated outputs (plots, metrics, and visualizations) are saved in the results/ directory, sorted into subfolders corresponding to the experiment that produced them.
