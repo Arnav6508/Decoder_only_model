@@ -1,5 +1,3 @@
-# run_beam_search_eval.py
-
 import torch
 from torch.utils.data import DataLoader
 import os
@@ -19,7 +17,6 @@ from models.model import DecoderOnlyTransformer
 from utils import Vocabulary, TinyStoriesDataset
 from beam_search_generator import generate_beam_search
 
-# --- Configuration from your original script ---
 D_MODEL = 300
 N_LAYERS = 3
 N_HEADS = 8
@@ -31,20 +28,18 @@ DROPOUT = 0.1
 CHECKPOINT_FILE = os.path.join(parent_dir, "model_checkpoints", "checkpoint_epoch_3.pth")
 VOCAB_FILE = os.path.join(parent_dir, "vocab.pkl")
 BATCH_SIZE = 1 
-PROMPT_LENGTH = 10 # Using a slightly longer prompt for better context
-MAX_GENERATION_LENGTH = 50 # Keep generation length reasonable for quick eval
+PROMPT_LENGTH = 10 
+MAX_GENERATION_LENGTH = 50 
 TEMPERATURE = 0.8 
 
 output_dir = "results/beam_search"
 output_file_name = "beam_search_evaluation.txt"
 
-# --- New Evaluation Configuration ---
 NUM_PROMPTS_FOR_EVAL = 5
 BEAM_WIDTHS_TO_TEST = [5, 10]
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# --- Original Sampling Generate Function (for baseline comparison) ---
 def generate_sampling(prompt_tokens: list[int], model: DecoderOnlyTransformer, vocab: Vocabulary, max_len: int, temp: float) -> list[int]:
     model.eval()
     input_tensor = torch.tensor(prompt_tokens, dtype=torch.long, device=device).unsqueeze(0)
@@ -65,7 +60,6 @@ def generate_sampling(prompt_tokens: list[int], model: DecoderOnlyTransformer, v
     return generated_tokens
 
 def main():
-    # --- Load Vocabulary and Model ---
     print(f"Using device: {device}")
     if not os.path.exists(VOCAB_FILE):
         raise FileNotFoundError(f"Error: Vocabulary file not found at {VOCAB_FILE}")
@@ -83,9 +77,8 @@ def main():
         raise FileNotFoundError(f"Error: Checkpoint file not found at {CHECKPOINT_FILE}")
     checkpoint = torch.load(CHECKPOINT_FILE, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
-    print("✅ Model state loaded successfully.")
+    print("Model state loaded successfully.")
 
-    # --- Load Data and Metrics ---
     valid_data = load_dataset("roneneldan/TinyStories", split='validation')
     valid_dataset = TinyStoriesDataset(valid_data, vocab)
     valid_loader = DataLoader(valid_dataset, batch_size=BATCH_SIZE, shuffle=True)
@@ -109,7 +102,7 @@ def main():
 
         current_prompt_results = {'prompt': prompt_text, 'reference': reference_text, 'methods': {}}
 
-        # === Method 1: Multinomial Sampling (Baseline) ===
+        # Method 1: Multinomial Sampling (Baseline) 
         start_time = time.time()
         sampling_tokens = generate_sampling(prompt_tokens, model, vocab, MAX_GENERATION_LENGTH, TEMPERATURE)
         duration = time.time() - start_time
@@ -120,7 +113,7 @@ def main():
         
         current_prompt_results['methods']['Sampling (temp=0.8)'] = {'text': sampling_text, 'bleu': bleu_score, 'tokens_per_sec': tokens_per_sec}
 
-        # === Method 2 & 3: Beam Search ===
+        # Method 2 & 3: Beam Search
         for k in BEAM_WIDTHS_TO_TEST:
             start_time = time.time()
             beam_tokens = generate_beam_search(prompt_tokens, model, vocab, MAX_GENERATION_LENGTH, k, CONTEXT_LEN)
@@ -135,13 +128,13 @@ def main():
         
         results.append(current_prompt_results)
 
-    # --- Print Detailed and Summary Results ---
+    # Summary Results
     os.makedirs(output_dir, exist_ok=True) 
     results_file = os.path.join(output_dir, output_file_name)
         
     save_results(results, BEAM_WIDTHS_TO_TEST, results_file)
         
-    print(f"\n✅ Detailed evaluation results have been saved to {results_file}")
+    print(f"\n Detailed evaluation results have been saved to {results_file}")
     
 
 def save_results(results, beam_widths, output_filename: str):
@@ -160,7 +153,6 @@ def save_results(results, beam_widths, output_filename: str):
         f.write(header + "\n")
         print(header)
 
-        # This part will now work correctly because avg_scores has been updated
         for method_name, scores in avg_scores.items():
             avg_bleu = scores['bleu'] / len(results)
             avg_tps = scores['tokens_per_sec'] / len(results)

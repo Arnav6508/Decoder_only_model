@@ -9,8 +9,8 @@ class LayerNorm(nn.Module):
     def __init__(self, features, eps=1e-6):
         super().__init__()
 
-        self.gamma = nn.Parameter(torch.ones(features)) # scaling
-        self.beta = nn.Parameter(torch.zeros(features)) # shifting
+        self.gamma = nn.Parameter(torch.ones(features)) 
+        self.beta = nn.Parameter(torch.zeros(features)) 
         self.eps = eps
 
     def forward(self, x):
@@ -37,10 +37,10 @@ class PositionalEncoding(nn.Module):
         i = torch.arange(0, d_model, 2, dtype=torch.float)
         div_term = 1.0/torch.pow(10000.0, i / d_model)
         
-        pos_matrix[:, 0::2] = torch.sin(position * div_term) # use sine at even positions
-        pos_matrix[:, 1::2] = torch.cos(position * div_term) # use cosine at odd positions
+        pos_matrix[:, 0::2] = torch.sin(position * div_term) 
+        pos_matrix[:, 1::2] = torch.cos(position * div_term)
   
-        self.register_buffer('pos_matrix', pos_matrix.unsqueeze(0)) # do not need training based on fixed formula
+        self.register_buffer('pos_matrix', pos_matrix.unsqueeze(0)) 
 
     def forward(self, x):
         return x + self.pos_matrix[:, :x.size(1)]
@@ -54,7 +54,6 @@ class MultiHeadAttention(nn.Module):
         self.n_heads = n_heads
         self.d_k = d_attn // n_heads # Dimension of key matrix of 1 head
 
-        # Linear layers for output projection
         self.q_linear_layer = nn.Linear(d_attn, d_attn)
         self.k_linear_layer = nn.Linear(d_attn, d_attn)
         self.v_linear_layer = nn.Linear(d_attn, d_attn)
@@ -67,17 +66,14 @@ class MultiHeadAttention(nn.Module):
         batch_size = x.size(0)
         seq_len = x.size(1)
 
-        # Project and reshape
         # (batch, seq_len, d_model) -> (batch, n_heads, seq_len, d_k)
         q = self.q_linear_layer(x).reshape(batch_size, -1, self.n_heads, self.d_k).transpose(1, 2)
         k = self.k_linear_layer(x).reshape(batch_size, -1, self.n_heads, self.d_k).transpose(1, 2)
         v = self.v_linear_layer(x).reshape(batch_size, -1, self.n_heads, self.d_k).transpose(1, 2)
 
-        # Scaled Dot Product Attention
         # (batch, n_heads, seq_len, d_k) x (batch, n_heads, d_k, seq_len) -> (batch, n_heads, seq_len, seq_len)
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
 
-        # Look ahead mask
         look_ahead_mask = torch.tril(torch.ones(seq_len, seq_len))
         look_ahead_mask = look_ahead_mask.reshape(1, 1, seq_len, seq_len)
         scores = scores.masked_fill(look_ahead_mask == 0, float('-inf'))

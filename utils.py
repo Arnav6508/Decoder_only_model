@@ -76,7 +76,6 @@ class Collate:
             seq_len = len(seq)
             padded_batch[i, :seq_len] = seq[:self.context_len]
 
-        # Teacher forcing (last token acts as prediction tokens)
         inputs = padded_batch[:, :-1]
         targets = padded_batch[:, 1:]
         
@@ -116,7 +115,6 @@ def load_fasttext_vectors(file_name, url, zip_file_name, cache_dir='.'):
     print(f"Parsing {file_name}...")
     word_vectors = {}
     with open(vec_path, 'r', encoding='utf-8') as f:
-        # The first line is header info, skip it
         next(f) 
         for line in tqdm(f, desc="Loading vectors"):
             parts = line.strip().split(' ')
