@@ -1,0 +1,16 @@
+
+================================================================================
+AVERAGE PERFORMANCE METRICS
+================================================================================
+Method: Sampling (temp=0.8)
+  - Average BLEU Score:      0.0219
+  - Average Tokens/Second:   110.11
+
+Method: Beam Search (k=5)
+  - Average BLEU Score:      0.0134
+  - Average Tokens/Second:   24.24
+
+Method: Beam Search (k=10)
+  - Average BLEU Score:      0.0149
+  - Average Tokens/Second:   11.66
+

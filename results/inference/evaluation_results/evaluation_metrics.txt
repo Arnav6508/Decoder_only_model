@@ -1,0 +1,8 @@
+==================================================
+EVALUATION METRICS
+==================================================
+Number of Samples: 50
+Temperature: 0.8
+--------------------------------------------------
+Average Perplexity per Token: 9.4149
+Average BLEU Score: 0.0176

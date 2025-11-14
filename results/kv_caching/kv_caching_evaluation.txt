@@ -1,0 +1,31 @@
+KV Cache Runtime Efficiency Benchmark Results
+==================================================
+Timestamp: 2025-10-19 21:45:05
+Device: cpu
+Batch Size: 20
+Prompt Length: 5
+Total Generation Length: 100
+New Tokens Generated per Sample: 95
+Temperature: 0.8
+--------------------------------------------------
+MODEL CONFIGURATION:
+  d_model: 300
+  n_layers: 3
+  n_heads: 8
+  d_ff: 512
+  d_attn: 304
+  context_len: 64
+  dropout: 0.1
+--------------------------------------------------
+PERFORMANCE RESULTS:
+Baseline (No KV Cache):
+  Time: 8.6639 seconds
+  Total tokens generated: 1900
+  Throughput: 219.30 tokens/sec
+KV Cache:
+  Time: 1.9152 seconds
+  Total tokens generated: 1900
+  Throughput: 992.07 tokens/sec
+--------------------------------------------------
+SPEEDUP: 4.52x
+==================================================

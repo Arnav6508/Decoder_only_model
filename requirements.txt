@@ -1,0 +1,5 @@
+torchtext
+torch
+tqdm
+evaluate
+seaborn
